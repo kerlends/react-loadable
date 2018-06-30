@@ -199,6 +199,7 @@ function createLoadableComponent(loadFn, options) {
         update();
       }).catch(err => {
         update();
+        throw err;
       });
     }
 
@@ -213,7 +214,7 @@ function createLoadableComponent(loadFn, options) {
     }
 
     retry = () => {
-      this.setState({ error: null, loading: true });
+      this.setState({ error: null, loading: true, timedOut: false });
       res = loadFn(opts.loader);
       this._loadModule();
     }
