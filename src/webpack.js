@@ -7,24 +7,50 @@ function buildManifest(compiler, compilation) {
   let context = compiler.options.context;
   let manifest = {};
 
-  compilation.chunks.forEach(chunk => {
-    chunk.files.forEach(file => {
-      chunk.forEachModule(module => {
-        let id = module.id;
-        let name = typeof module.libIdent === 'function' ? module.libIdent({ context }) : null;
-        let publicPath = url.resolve(compilation.outputOptions.publicPath || '', file);
-        
-        let currentModule = module;
-        if (module.constructor.name === 'ConcatenatedModule') {
-          currentModule = module.rootModule;
-        }
-        if (!manifest[currentModule.rawRequest]) {
-          manifest[currentModule.rawRequest] = [];
-        }
-
-        manifest[currentModule.rawRequest].push({ id, name, file, publicPath });
+  compilation.chunkGroups.forEach(function(chunkGroup) {
+    let files = [];
+    chunkGroup.chunks.forEach(function(chunk) {
+      chunk.files.forEach(function(file) {
+        var publicPath = url.resolve(
+          compilation.outputOptions.publicPath || '',
+          file,
+        );
+        files.push({
+          file,
+          publicPath,
+          chunkName: chunk.name,
+        });
       });
     });
+
+    chunkGroup.blocksIterable.forEach(function(block) {
+      let name;
+      let id = null;
+      let dependency;
+
+      block.module.dependencies.forEach(function(dep) {
+        if (dep.request === block.request && !dependency)
+          dependency = dep;
+      });
+
+      if (dependency) {
+        id = dependency.module.id;
+        name =
+          typeof dependency.module.libIdent === 'function'
+            ? dependency.module.libIdent({ context })
+            : null;
+        console.log(dependency);
+      }
+
+      files.forEach(function(file) {
+        file.id = id;
+        file.name = name;
+      });
+
+      manifest[block.request] = files;
+    });
+
+    console.log({ files });
   });
 
   return manifest;
